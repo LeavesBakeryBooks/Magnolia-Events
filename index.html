@@ -1,6 +1,3 @@
-Index · HTML
-Copy
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,7 +38,7 @@ input,select,textarea,button{font-family:inherit}
 <div id="root"></div>
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const ADMIN_PASS = "magnolia2026"; // change before sharing!
+const ADMIN_PASS = "andthen2026"; // change before sharing!
  
 const BUSINESSES = [
   {name:"Cherry Coffee",                address:"1121 W Magnolia Ave, Fort Worth, TX"},
@@ -87,6 +84,7 @@ let S = {
   submitted:false,
   nlMonth:new Date().getMonth()+1,
   nlYear:new Date().getFullYear(),
+  nlView:"month", // "month" | "week" | "nextweek"
   copied:false,
   form:{title:"",business:"",address:"",date:"",time:"",category:"Community",description:"",contact:""},
 };
@@ -306,17 +304,45 @@ function fld(label,input,wrapStyle){
 }
  
 // ── NEWSLETTER ─────────────────────────────────────────────────
+function getWeekBounds(offsetWeeks){
+  // Returns {start, end} as YYYY-MM-DD strings for a given week offset from today
+  const now=new Date();
+  const dow=now.getDay(); // 0=Sun
+  const startOfWeek=new Date(now);
+  startOfWeek.setDate(now.getDate()-dow+(offsetWeeks*7));
+  startOfWeek.setHours(0,0,0,0);
+  const endOfWeek=new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate()+6);
+  return {
+    start: startOfWeek.toISOString().slice(0,10),
+    end:   endOfWeek.toISOString().slice(0,10),
+    label: startOfWeek.toLocaleDateString("en-US",{month:"long",day:"numeric"})+" – "+endOfWeek.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})
+  };
+}
+ 
 function buildNewsletter(){
-  const mo=S.nlMonth,yr=S.nlYear;
-  const ms=String(mo).padStart(2,"0");
-  const evs=S.events.filter(e=>e.approved&&e.date.startsWith(yr+"-"+ms)).sort((a,b)=>a.date.localeCompare(b.date));
+  const mo=S.nlMonth,yr=S.nlYear,nv=S.nlView;
+ 
+  // Determine which events to show based on view mode
+  let evs, periodLabel, subLabel;
+  if(nv==="week"||nv==="nextweek"){
+    const wb=getWeekBounds(nv==="week"?0:1);
+    evs=S.events.filter(e=>e.approved&&e.date>=wb.start&&e.date<=wb.end).sort((a,b)=>a.date.localeCompare(b.date));
+    periodLabel=nv==="week"?"This Week":"Next Week";
+    subLabel=wb.label;
+  } else {
+    const ms=String(mo).padStart(2,"0");
+    evs=S.events.filter(e=>e.approved&&e.date.startsWith(yr+"-"+ms)).sort((a,b)=>a.date.localeCompare(b.date));
+    periodLabel=MONTHS[mo-1]+" "+yr;
+    subLabel="Fort Worth, Texas · Magnolia Avenue";
+  }
  
   const plainText=[
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
     "WHAT'S HAPPENING ON MAGNOLIA AVENUE",
-    MONTHS[mo-1].toUpperCase()+" "+yr+" · FORT WORTH, TEXAS",
+    periodLabel.toUpperCase()+(nv!=="month"?" · "+subLabel.toUpperCase():" · FORT WORTH, TEXAS"),
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━","",
-    "Your neighborhood is alive! Here's what's coming up this month.","",
+    "Your neighborhood is alive! Here's what's coming up.","",
     ...evs.map(e=>{const fd=fmtDay(e.date);return`▸ ${e.title.toUpperCase()}\n  ${fd.full}${e.time?" · "+e.time:""}\n  ${e.business}${e.address?" · "+e.address:""}\n  ${e.description}\n  Contact: ${e.contact}\n`}),
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
     "Support local. Stay longer. Come back soon.",
@@ -327,14 +353,28 @@ function buildNewsletter(){
   page.appendChild(buildHeader());
   const inner=div({maxWidth:"700px",margin:"0 auto",padding:"28px 22px"});
  
-  // Controls
+  // ── View toggle: Week / Next Week / Month ──
+  const toggleWrap=h("div",{class:"no-print",style:{display:"flex",gap:"6px",marginBottom:"16px",background:"#f0ece8",borderRadius:"10px",padding:"4px",width:"fit-content"}});
+  [["week","This Week"],["nextweek","Next Week"],["month","Full Month"]].forEach(([v,label])=>{
+    toggleWrap.appendChild(h("button",{
+      onClick:()=>set({nlView:v}),
+      style:{padding:"7px 16px",fontSize:"13px",fontWeight:"600",border:"none",borderRadius:"7px",cursor:"pointer",
+        background:nv===v?"#8B0000":"transparent",
+        color:nv===v?"white":"#666",transition:"all 0.15s"}
+    },label));
+  });
+  inner.appendChild(toggleWrap);
+ 
+  // Controls row
   const ctrl=h("div",{class:"no-print",style:{display:"flex",gap:"8px",alignItems:"center",marginBottom:"20px",flexWrap:"wrap"}});
-  const moSel=h("select",{style:{padding:"8px 11px",border:"1px solid #ddd",borderRadius:"6px",fontSize:"14px"},onChange:e=>set({nlMonth:Number(e.target.value)})});
-  MONTHS.forEach((m,i)=>{const o=h("option",{value:i+1},m);if(i+1===mo)o.selected=true;moSel.appendChild(o);});
-  const yrSel=h("select",{style:{padding:"8px 11px",border:"1px solid #ddd",borderRadius:"6px",fontSize:"14px"},onChange:e=>set({nlYear:Number(e.target.value)})});
-  [2026,2027,2028].forEach(y=>{const o=h("option",{value:y},String(y));if(y===yr)o.selected=true;yrSel.appendChild(o);});
-  ctrl.appendChild(moSel);
-  ctrl.appendChild(yrSel);
+  if(nv==="month"){
+    const moSel=h("select",{style:{padding:"8px 11px",border:"1px solid #ddd",borderRadius:"6px",fontSize:"14px"},onChange:e=>set({nlMonth:Number(e.target.value)})});
+    MONTHS.forEach((m,i)=>{const o=h("option",{value:i+1},m);if(i+1===mo)o.selected=true;moSel.appendChild(o);});
+    const yrSel=h("select",{style:{padding:"8px 11px",border:"1px solid #ddd",borderRadius:"6px",fontSize:"14px"},onChange:e=>set({nlYear:Number(e.target.value)})});
+    [2026,2027,2028].forEach(y=>{const o=h("option",{value:y},String(y));if(y===yr)o.selected=true;yrSel.appendChild(o);});
+    ctrl.appendChild(moSel);
+    ctrl.appendChild(yrSel);
+  }
   ctrl.appendChild(h("button",{class:"btn btn-red",onClick:()=>window.print()},"🖨 Print / PDF"));
   ctrl.appendChild(h("button",{class:"btn",style:{background:S.copied?"#388E3C":"#444",color:"white"},
     onClick:()=>{navigator.clipboard.writeText(plainText).then(()=>{set({copied:true});setTimeout(()=>set({copied:false}),2500);})}},
@@ -346,14 +386,17 @@ function buildNewsletter(){
   card.appendChild(div({background:"#8B0000",color:"white",padding:"28px 32px",textAlign:"center"},
     h("div",{style:{fontSize:"10px",letterSpacing:"5px",textTransform:"uppercase",opacity:".6",marginBottom:"6px"}},"Fort Worth, Texas · Magnolia Avenue"),
     h("div",{style:{fontSize:"36px",fontWeight:"700",fontFamily:"Georgia,serif",marginBottom:"4px"}},"What's Happening"),
-    h("div",{style:{fontSize:"18px",opacity:".8"}},MONTHS[mo-1]+" "+yr)
+    h("div",{style:{fontSize:"18px",opacity:".8"}},periodLabel),
+    nv!=="month"?h("div",{style:{fontSize:"13px",opacity:".65",marginTop:"4px"}},subLabel):null
   ));
   card.appendChild(div({padding:"18px 32px 4px",textAlign:"center",color:"#777",fontSize:"14px",fontStyle:"italic"},
-    "Your neighborhood is alive. Here's what's coming up on Magnolia Avenue this month."));
+    nv==="month"?"Your neighborhood is alive. Here's what's coming up on Magnolia Avenue this month.":
+    "Here's what's happening on Magnolia Avenue "+( nv==="week"?"this week":"next week")+"."));
  
   const evList=div({padding:"12px 32px 28px"});
+  const emptyMsg=nv==="month"?"No events this month yet — submit yours!":nv==="week"?"No events this week yet.":"No events next week yet.";
   if(evs.length===0){
-    evList.appendChild(h("p",{style:{textAlign:"center",color:"#bbb",fontStyle:"italic",padding:"40px 0"}},"No events this month yet — submit yours!"));
+    evList.appendChild(h("p",{style:{textAlign:"center",color:"#bbb",fontStyle:"italic",padding:"40px 0"}},emptyMsg));
   } else {
     evs.forEach((e,idx)=>{
       const c=cs(e.category);const fd=fmtDay(e.date);
