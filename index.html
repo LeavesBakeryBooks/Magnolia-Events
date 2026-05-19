@@ -1,3 +1,6 @@
+Index · HTML
+Copy
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -38,8 +41,8 @@ input,select,textarea,button{font-family:inherit}
 <div id="root"></div>
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const ADMIN_PASS = "andthen2026"; // change before sharing!
-
+const ADMIN_PASS = "magnolia2026"; // change before sharing!
+ 
 const BUSINESSES = [
   {name:"Cherry Coffee",                address:"1121 W Magnolia Ave, Fort Worth, TX"},
   {name:"Ellerbe Fine Foods",           address:"1501 W Magnolia Ave, Fort Worth, TX"},
@@ -53,7 +56,7 @@ const BUSINESSES = [
   {name:"West Magnolia Plastic Surgery",address:"1200 W Magnolia Ave, Fort Worth, TX"},
   {name:"Other / Not Listed",           address:""},
 ];
-
+ 
 const CATEGORIES = ["All","Dining","Shopping","Community","Arts","Live Music","Fitness","Other"];
 const CAT = {
   "Dining":    {bg:"#FFF3E0",fg:"#BF360C",dot:"#FF6D00"},
@@ -65,14 +68,14 @@ const CAT = {
   "Other":     {bg:"#F5F5F5",fg:"#424242",dot:"#9E9E9E"},
 };
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
-
+ 
 const SAMPLE=[
   {id:1,title:"First Friday Art Walk",business:"Magnolia Ave Merchants",address:"Magnolia Ave, Fort Worth, TX",date:"2026-06-05",time:"6:00 PM – 9:00 PM",category:"Arts",description:"Monthly art walk featuring local galleries, pop-up vendors, and live music all along Magnolia Ave. Free and open to all.",contact:"info@magnoliaave.com",approved:true},
   {id:2,title:"Summer Sidewalk Sale",business:"Lili's Bistro",address:"1310 W Magnolia Ave, Fort Worth, TX",date:"2026-06-13",time:"10:00 AM – 4:00 PM",category:"Shopping",description:"Up to 40% off seasonal inventory. Sidewalk racks, refreshments, and a raffle every hour.",contact:"hello@lilisbistro.com",approved:true},
   {id:3,title:"Jazz Brunch Series",business:"Fixture Brewing Co.",address:"3900 W Vickery Blvd, Fort Worth, TX",date:"2026-06-21",time:"11:00 AM – 2:00 PM",category:"Live Music",description:"Live jazz trio, brunch specials, and craft beer flights. Walk-ins welcome.",contact:"tap@fixturebrewing.com",approved:true},
   {id:4,title:"Yoga in the Alley",business:"Magnolia Motor Lounge",address:"1251 W Magnolia Ave, Fort Worth, TX",date:"2026-06-28",time:"9:00 AM – 10:00 AM",category:"Fitness",description:"Free outdoor yoga before we open. Bring a mat, we'll bring the coffee.",contact:"hello@magnoliamotor.com",approved:true},
 ];
-
+ 
 // ── STATE ──────────────────────────────────────────────────────
 let S = {
   view:"calendar",
@@ -87,12 +90,12 @@ let S = {
   copied:false,
   form:{title:"",business:"",address:"",date:"",time:"",category:"Community",description:"",contact:""},
 };
-
+ 
 function save(){try{localStorage.setItem("mag-v5",JSON.stringify(S.events))}catch{}}
 function set(patch){Object.assign(S,patch);render()}
 function cs(cat){return CAT[cat]||CAT["Other"]}
 function fmtDay(ds){const d=new Date(ds+"T12:00:00");return{day:d.getDate(),mon:d.toLocaleDateString("en-US",{month:"short"}),dow:d.toLocaleDateString("en-US",{weekday:"short"}),full:d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}}
-
+ 
 // ── DOM HELPERS ────────────────────────────────────────────────
 function h(tag,attrs,...kids){
   const e=document.createElement(tag);
@@ -110,14 +113,14 @@ function h(tag,attrs,...kids){
 }
 function div(s,...k){return h("div",{style:s},...k)}
 function span(s,t){return h("span",{style:s},t)}
-
+ 
 // ── RENDER ─────────────────────────────────────────────────────
 function render(){
   const root=document.getElementById("root");
   root.innerHTML="";
   root.appendChild(buildView());
 }
-
+ 
 function buildView(){
   const {view}=S;
   if(view==="newsletter") return buildNewsletter();
@@ -125,7 +128,7 @@ function buildView(){
   if(view==="admin")      return buildAdminPanel();
   return buildMain();
 }
-
+ 
 // ── HEADER ─────────────────────────────────────────────────────
 function buildHeader(){
   const tabDefs=[["calendar","📅 Events"],["submit","＋ Add Event"],["newsletter","🖨 Newsletter"],["adminGate","🔒 Admin"]];
@@ -146,7 +149,7 @@ function buildHeader(){
     )
   );
 }
-
+ 
 // ── MAIN ───────────────────────────────────────────────────────
 function buildMain(){
   const pub=S.events.filter(e=>e.approved);
@@ -159,32 +162,42 @@ function buildMain(){
   wrap.appendChild(inner);
   return wrap;
 }
-
+ 
 // ── CALENDAR ───────────────────────────────────────────────────
 function buildCalendar(filtered,events){
   const wrap=h("div",{});
-
-  // Map
+ 
+  // Map — links to Google Maps search for Magnolia Ave events
   const approved=events.filter(e=>e.approved);
-  const mapWrap=div({borderRadius:"12px",overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.10)",position:"relative",marginBottom:"24px"});
-  mapWrap.appendChild(h("iframe",{title:"Map",width:"100%",height:"300",frameborder:"0",scrolling:"no",
-    src:"https://www.openstreetmap.org/export/embed.html?bbox=-97.385%2C32.728%2C-97.358%2C32.740&layer=mapnik&marker=32.7335%2C-97.369",
-    style:{display:"block",filter:"sepia(15%) contrast(95%)"}}));
+  const mapWrap=div({borderRadius:"12px",overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.10)",position:"relative",marginBottom:"24px",background:"#f0ece8"});
+ 
+  // Use Google Maps embed centered on Magnolia Ave with a search query
+  const mapQ = encodeURIComponent("W Magnolia Ave, Fort Worth, TX");
+  mapWrap.appendChild(h("iframe",{
+    title:"Map", width:"100%", height:"300", frameborder:"0", style:{display:"block",border:"0"},
+    loading:"lazy", allowfullscreen:"",
+    src:`https://www.google.com/maps/embed/v1/place?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&q=${mapQ}&zoom=15`
+  }));
+ 
+  // Event pin overlay list
   const pins=div({position:"absolute",top:"10px",left:"10px",display:"flex",flexDirection:"column",gap:"4px",maxWidth:"210px"});
   approved.slice(0,5).forEach(e=>{
     const c=cs(e.category);
-    pins.appendChild(div({background:"white",borderRadius:"6px",padding:"4px 9px",fontSize:"11px",fontWeight:"600",color:c.fg,borderLeft:"3px solid "+c.dot,boxShadow:"0 1px 4px rgba(0,0,0,.13)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"},"📍 "+e.title));
+    const pin=div({background:"white",borderRadius:"6px",padding:"4px 9px",fontSize:"11px",fontWeight:"600",color:c.fg,borderLeft:"3px solid "+c.dot,boxShadow:"0 1px 4px rgba(0,0,0,.18)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",cursor:"pointer"});
+    pin.textContent="📍 "+e.title;
+    if(e.address) pin.onclick=()=>window.open("https://www.google.com/maps/search/"+encodeURIComponent(e.address),"_blank");
+    pins.appendChild(pin);
   });
-  if(approved.length>5) pins.appendChild(div({fontSize:"11px",color:"#888",paddingLeft:"4px"},`+${approved.length-5} more`));
+  if(approved.length>5) pins.appendChild(div({fontSize:"11px",color:"#888",paddingLeft:"4px",background:"rgba(255,255,255,0.8)",borderRadius:"4px",padding:"2px 6px"},`+${approved.length-5} more`));
   mapWrap.appendChild(pins);
   mapWrap.appendChild(div({position:"absolute",bottom:"10px",right:"10px",background:"rgba(255,255,255,.94)",borderRadius:"8px",padding:"6px 12px",fontSize:"12px",color:"#555",boxShadow:"0 1px 4px rgba(0,0,0,.12)"},`${approved.length} upcoming event${approved.length!==1?"s":""} · Magnolia Ave`));
   wrap.appendChild(mapWrap);
-
+ 
   // Filter pills
   const row=h("div",{id:"filters",style:{display:"flex",gap:"7px",marginBottom:"18px",flexWrap:"wrap"}});
   CATEGORIES.forEach(cat=>row.appendChild(h("button",{class:"pill"+(S.filter===cat?" active":""),onClick:()=>set({filter:cat})},cat)));
   wrap.appendChild(row);
-
+ 
   // Cards
   if(filtered.length===0){
     wrap.appendChild(div({textAlign:"center",padding:"60px 0",color:"#ccc"},
@@ -198,7 +211,7 @@ function buildCalendar(filtered,events){
   }
   return wrap;
 }
-
+ 
 function buildCard(e){
   const c=cs(e.category);
   const fd=fmtDay(e.date);
@@ -221,42 +234,54 @@ function buildCard(e){
   card.appendChild(info);
   return card;
 }
-
+ 
 // ── SUBMIT ─────────────────────────────────────────────────────
 function buildSubmit(){
   const wrap=div({maxWidth:"560px"});
   wrap.appendChild(h("h2",{style:{fontSize:"22px",fontWeight:"800",marginBottom:"4px",color:"#111"}},"Add Your Event"));
   wrap.appendChild(h("p",{style:{color:"#888",fontSize:"14px",marginBottom:"22px"}},"Submissions go to the merchants committee for approval before going live."));
   if(S.submitted) wrap.appendChild(h("div",{class:"success-banner"},"✓ Submitted! Your event is pending approval — usually within 24 hours."));
-
+ 
   const f=div({display:"flex",flexDirection:"column",gap:"0"});
-
+ 
   f.appendChild(fld("Event Name *",h("input",{type:"text",value:S.form.title,placeholder:"e.g. Summer Sale, Live Jazz Night…",
     onInput:e=>{S.form.title=e.target.value}})));
-
+ 
   const bizSel=h("select",{onChange:e=>{
     const b=BUSINESSES.find(x=>x.name===e.target.value);
-    if(b){S.form.business=b.name==="Other / Not Listed"?"":b.name;S.form.address=b.address;render();}
+    if(b){
+      S.form.business=b.name==="Other / Not Listed"?"":b.name;
+      S.form.address=b.address;
+      // Show/hide the "Other" text input without full re-render
+      const otherField=document.getElementById("other-biz-field");
+      if(otherField) otherField.style.display=(!S.form.business)?"block":"none";
+    }
   }});
   bizSel.appendChild(h("option",{value:"",disabled:"",selected:""},"— Select your business —"));
-  BUSINESSES.forEach(b=>{const o=h("option",{value:b.name},b.name);bizSel.appendChild(o);});
+  BUSINESSES.forEach(b=>{
+    const o=h("option",{value:b.name},b.name);
+    if(b.name===S.form.business) o.selected=true;
+    bizSel.appendChild(o);
+  });
   f.appendChild(fld("Your Business *",bizSel));
-
-  if(!S.form.business){
-    f.appendChild(fld("Business Name *",h("input",{type:"text",value:S.form.business,placeholder:"Your business name",onInput:e=>{S.form.business=e.target.value}})));
-  }
-
+ 
+  // "Other" fallback field — hidden by default, shown only if Other selected
+  const otherWrap=fld("Business Name",h("input",{type:"text",value:S.form.business,placeholder:"Your business name",onInput:e=>{S.form.business=e.target.value}}));
+  otherWrap.id="other-biz-field";
+  otherWrap.style.display="none";
+  f.appendChild(otherWrap);
+ 
   const row2=div({display:"flex",gap:"12px"});
   row2.appendChild(fld("Date *",h("input",{type:"date",value:S.form.date,onInput:e=>{S.form.date=e.target.value}}),{flex:"1"}));
   const catSel=h("select",{onChange:e=>{S.form.category=e.target.value}});
   CATEGORIES.filter(c=>c!=="All").forEach(c=>{const o=h("option",{value:c},c);if(c===S.form.category)o.selected=true;catSel.appendChild(o);});
   row2.appendChild(fld("Category",catSel,{flex:"1"}));
   f.appendChild(row2);
-
+ 
   f.appendChild(fld("Time",h("input",{type:"text",value:S.form.time,placeholder:"e.g. 6:00 PM – 9:00 PM",onInput:e=>{S.form.time=e.target.value}})));
   f.appendChild(fld("Contact Email *",h("input",{type:"email",value:S.form.contact,placeholder:"so customers can reach you",onInput:e=>{S.form.contact=e.target.value}})));
   f.appendChild(fld("Description",h("textarea",{rows:"3",placeholder:"What should customers know? Specials, parking, what to expect…",onInput:e=>{S.form.description=e.target.value}},S.form.description)));
-
+ 
   const submitBtn=h("button",{class:"btn btn-red",style:{alignSelf:"flex-start",padding:"12px 28px",fontSize:"15px"},
     onClick:()=>{
       if(!S.form.title||!S.form.business||!S.form.date||!S.form.contact) return;
@@ -271,7 +296,7 @@ function buildSubmit(){
   wrap.appendChild(f);
   return wrap;
 }
-
+ 
 function fld(label,input,wrapStyle){
   const w=div({marginBottom:"14px",...(wrapStyle||{})});
   w.appendChild(h("label",{style:{display:"block",fontSize:"13px",fontWeight:"600",color:"#333",marginBottom:"4px"}},label));
@@ -279,13 +304,13 @@ function fld(label,input,wrapStyle){
   w.appendChild(input);
   return w;
 }
-
+ 
 // ── NEWSLETTER ─────────────────────────────────────────────────
 function buildNewsletter(){
   const mo=S.nlMonth,yr=S.nlYear;
   const ms=String(mo).padStart(2,"0");
   const evs=S.events.filter(e=>e.approved&&e.date.startsWith(yr+"-"+ms)).sort((a,b)=>a.date.localeCompare(b.date));
-
+ 
   const plainText=[
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
     "WHAT'S HAPPENING ON MAGNOLIA AVENUE",
@@ -297,11 +322,11 @@ function buildNewsletter(){
     "Support local. Stay longer. Come back soon.",
     "— The Merchants of Magnolia Avenue, Fort Worth"
   ].join("\n");
-
+ 
   const page=h("div",{});
   page.appendChild(buildHeader());
   const inner=div({maxWidth:"700px",margin:"0 auto",padding:"28px 22px"});
-
+ 
   // Controls
   const ctrl=h("div",{class:"no-print",style:{display:"flex",gap:"8px",alignItems:"center",marginBottom:"20px",flexWrap:"wrap"}});
   const moSel=h("select",{style:{padding:"8px 11px",border:"1px solid #ddd",borderRadius:"6px",fontSize:"14px"},onChange:e=>set({nlMonth:Number(e.target.value)})});
@@ -315,7 +340,7 @@ function buildNewsletter(){
     onClick:()=>{navigator.clipboard.writeText(plainText).then(()=>{set({copied:true});setTimeout(()=>set({copied:false}),2500);})}},
     S.copied?"✓ Copied!":"📋 Copy Text"));
   inner.appendChild(ctrl);
-
+ 
   // Print card
   const card=h("div",{id:"newsletter-card",style:{background:"white",border:"1px solid #e0ddd8",borderRadius:"12px",overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.07)"}});
   card.appendChild(div({background:"#8B0000",color:"white",padding:"28px 32px",textAlign:"center"},
@@ -325,7 +350,7 @@ function buildNewsletter(){
   ));
   card.appendChild(div({padding:"18px 32px 4px",textAlign:"center",color:"#777",fontSize:"14px",fontStyle:"italic"},
     "Your neighborhood is alive. Here's what's coming up on Magnolia Avenue this month."));
-
+ 
   const evList=div({padding:"12px 32px 28px"});
   if(evs.length===0){
     evList.appendChild(h("p",{style:{textAlign:"center",color:"#bbb",fontStyle:"italic",padding:"40px 0"}},"No events this month yet — submit yours!"));
@@ -360,7 +385,7 @@ function buildNewsletter(){
   page.appendChild(inner);
   return page;
 }
-
+ 
 // ── ADMIN GATE ─────────────────────────────────────────────────
 function buildAdminGate(){
   const page=h("div",{});
@@ -384,12 +409,12 @@ function buildAdminGate(){
   ));
   return page;
 }
-
+ 
 function tryAdmin(){
   if(S.adminInput===ADMIN_PASS){set({view:"admin",adminOk:true,passErr:false});}
   else set({passErr:true});
 }
-
+ 
 // ── ADMIN PANEL ────────────────────────────────────────────────
 function buildAdminPanel(){
   const pending=S.events.filter(e=>!e.approved);
@@ -397,14 +422,14 @@ function buildAdminPanel(){
   const page=h("div",{});
   page.appendChild(buildHeader());
   const inner=div({maxWidth:"700px",margin:"0 auto",padding:"28px 22px"});
-
+ 
   // heading
   const hrow=div({display:"flex",alignItems:"center",gap:"12px",marginBottom:"24px"});
   hrow.appendChild(h("button",{class:"btn btn-gray",onClick:()=>set({view:"calendar",adminOk:false,adminInput:""})},"← Back"));
   hrow.appendChild(h("h2",{style:{fontSize:"22px",fontWeight:"800",color:"#8B0000",margin:"0"}},"Admin Panel"));
   if(pending.length>0) hrow.appendChild(span({background:"#FF6D00",color:"white",borderRadius:"20px",padding:"2px 10px",fontSize:"12px",fontWeight:"700"},pending.length+" pending"));
   inner.appendChild(hrow);
-
+ 
   // pending
   inner.appendChild(h("div",{class:"section-label"},`Pending Approval (${pending.length})`));
   if(pending.length===0){
@@ -424,7 +449,7 @@ function buildAdminPanel(){
       inner.appendChild(card);
     });
   }
-
+ 
   // live
   inner.appendChild(h("div",{class:"section-label",style:{marginTop:"16px"}},`Live Events (${approved.length})`));
   approved.forEach(e=>{
@@ -437,11 +462,11 @@ function buildAdminPanel(){
       onClick:()=>{S.events=S.events.filter(x=>x.id!==e.id);save();render();}},"Remove"));
     inner.appendChild(card);
   });
-
+ 
   page.appendChild(inner);
   return page;
 }
-
+ 
 // ── BOOT ───────────────────────────────────────────────────────
 render();
 </script>
