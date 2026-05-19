@@ -169,12 +169,11 @@ function buildCalendar(filtered,events){
   const approved=events.filter(e=>e.approved);
   const mapWrap=div({borderRadius:"12px",overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.10)",position:"relative",marginBottom:"24px",background:"#f0ece8"});
  
-  // Use Google Maps embed centered on Magnolia Ave with a search query
-  const mapQ = encodeURIComponent("W Magnolia Ave, Fort Worth, TX");
+  // OpenStreetMap embed — free, no API key needed
   mapWrap.appendChild(h("iframe",{
-    title:"Map", width:"100%", height:"300", frameborder:"0", style:{display:"block",border:"0"},
-    loading:"lazy", allowfullscreen:"",
-    src:`https://www.google.com/maps/embed/v1/place?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&q=${mapQ}&zoom=15`
+    title:"Map", width:"100%", height:"300", frameborder:"0", scrolling:"no",
+    style:{display:"block",border:"0",filter:"sepia(10%) contrast(95%)"},
+    src:"https://www.openstreetmap.org/export/embed.html?bbox=-97.390%2C32.728%2C-97.355%2C32.742&layer=mapnik"
   }));
  
   // Event pin overlay list
