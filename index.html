@@ -54,15 +54,14 @@ const BUSINESSES = [
   {name:"Other / Not Listed",           address:""},
 ];
  
-const CATEGORIES = ["All","Dining","Shopping","Community","Arts","Live Music","Fitness","Other"];
+const CATEGORIES = ["All","Dining","Shopping","Community","Art and Music","Health and Wellness","Other"];
 const CAT = {
-  "Dining":    {bg:"#FFF3E0",fg:"#BF360C",dot:"#FF6D00"},
-  "Shopping":  {bg:"#E8F5E9",fg:"#1B5E20",dot:"#43A047"},
-  "Community": {bg:"#E3F2FD",fg:"#0D47A1",dot:"#1E88E5"},
-  "Arts":      {bg:"#F3E5F5",fg:"#4A148C",dot:"#8E24AA"},
-  "Live Music":{bg:"#FFF8E1",fg:"#E65100",dot:"#FFA000"},
-  "Fitness":   {bg:"#FCE4EC",fg:"#880E4F",dot:"#E91E63"},
-  "Other":     {bg:"#F5F5F5",fg:"#424242",dot:"#9E9E9E"},
+  "Dining":            {bg:"#FFF3E0",fg:"#BF360C",dot:"#FF6D00"},
+  "Shopping":          {bg:"#E8F5E9",fg:"#1B5E20",dot:"#43A047"},
+  "Community":         {bg:"#E3F2FD",fg:"#0D47A1",dot:"#1E88E5"},
+  "Art and Music":     {bg:"#F3E5F5",fg:"#4A148C",dot:"#8E24AA"},
+  "Health and Wellness":{bg:"#FCE4EC",fg:"#880E4F",dot:"#E91E63"},
+  "Other":             {bg:"#F5F5F5",fg:"#424242",dot:"#9E9E9E"},
 };
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
  
@@ -86,7 +85,7 @@ let S = {
   nlYear:new Date().getFullYear(),
   nlView:"month", // "month" | "week" | "nextweek"
   copied:false,
-  form:{title:"",business:"",address:"",date:"",time:"",category:"Community",description:"",contact:""},
+  form:{title:"",business:"",address:"",date:"",time:"",categories:[],description:"",contact:""},
 };
  
 function save(){try{localStorage.setItem("mag-v5",JSON.stringify(S.events))}catch{}}
@@ -151,7 +150,11 @@ function buildHeader(){
 // ── MAIN ───────────────────────────────────────────────────────
 function buildMain(){
   const pub=S.events.filter(e=>e.approved);
-  const filtered=pub.filter(e=>S.filter==="All"||e.category===S.filter).sort((a,b)=>a.date.localeCompare(b.date));
+  const filtered=pub.filter(e=>{
+    if(S.filter==="All") return true;
+    const cats=Array.isArray(e.categories)?e.categories:[e.category];
+    return cats.includes(S.filter);
+  }).sort((a,b)=>a.date.localeCompare(b.date));
   const wrap=h("div",{});
   wrap.appendChild(buildHeader());
   const inner=div({maxWidth:"940px",margin:"0 auto",padding:"26px 22px"});
@@ -164,31 +167,6 @@ function buildMain(){
 // ── CALENDAR ───────────────────────────────────────────────────
 function buildCalendar(filtered,events){
   const wrap=h("div",{});
- 
-  // Map — links to Google Maps search for Magnolia Ave events
-  const approved=events.filter(e=>e.approved);
-  const mapWrap=div({borderRadius:"12px",overflow:"hidden",boxShadow:"0 2px 12px rgba(0,0,0,.10)",position:"relative",marginBottom:"24px",background:"#f0ece8"});
- 
-  // OpenStreetMap embed — free, no API key needed
-  mapWrap.appendChild(h("iframe",{
-    title:"Map", width:"100%", height:"300", frameborder:"0", scrolling:"no",
-    style:{display:"block",border:"0",filter:"sepia(10%) contrast(95%)"},
-    src:"https://www.openstreetmap.org/export/embed.html?bbox=-97.390%2C32.728%2C-97.355%2C32.742&layer=mapnik"
-  }));
- 
-  // Event pin overlay list
-  const pins=div({position:"absolute",top:"10px",left:"10px",display:"flex",flexDirection:"column",gap:"4px",maxWidth:"210px"});
-  approved.slice(0,5).forEach(e=>{
-    const c=cs(e.category);
-    const pin=div({background:"white",borderRadius:"6px",padding:"4px 9px",fontSize:"11px",fontWeight:"600",color:c.fg,borderLeft:"3px solid "+c.dot,boxShadow:"0 1px 4px rgba(0,0,0,.18)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",cursor:"pointer"});
-    pin.textContent="📍 "+e.title;
-    if(e.address) pin.onclick=()=>window.open("https://www.google.com/maps/search/"+encodeURIComponent(e.address),"_blank");
-    pins.appendChild(pin);
-  });
-  if(approved.length>5) pins.appendChild(div({fontSize:"11px",color:"#888",paddingLeft:"4px",background:"rgba(255,255,255,0.8)",borderRadius:"4px",padding:"2px 6px"},`+${approved.length-5} more`));
-  mapWrap.appendChild(pins);
-  mapWrap.appendChild(div({position:"absolute",bottom:"10px",right:"10px",background:"rgba(255,255,255,.94)",borderRadius:"8px",padding:"6px 12px",fontSize:"12px",color:"#555",boxShadow:"0 1px 4px rgba(0,0,0,.12)"},`${approved.length} upcoming event${approved.length!==1?"s":""} · Magnolia Ave`));
-  wrap.appendChild(mapWrap);
  
   // Filter pills
   const row=h("div",{id:"filters",style:{display:"flex",gap:"7px",marginBottom:"18px",flexWrap:"wrap"}});
@@ -220,7 +198,8 @@ function buildCard(e){
   const info=h("div",{style:{flex:"1"}});
   const titleRow=div({display:"flex",alignItems:"center",gap:"8px",flexWrap:"wrap",marginBottom:"3px"});
   titleRow.appendChild(h("span",{style:{fontWeight:"700",fontSize:"16px",color:"#111"}},e.title));
-  titleRow.appendChild(h("span",{class:"badge",style:{background:c.bg,color:c.fg}},e.category));
+  const eCats=Array.isArray(e.categories)?e.categories:(e.category?[e.category]:[]);
+  eCats.forEach(cat=>{const cc=cs(cat);titleRow.appendChild(h("span",{class:"badge",style:{background:cc.bg,color:cc.fg,marginRight:"4px"}},cat));});
   info.appendChild(titleRow);
   const meta=div({fontSize:"13px",color:"#666",marginBottom:"4px"});
   meta.innerHTML=`<strong style="color:#333">${e.business}</strong>${e.address?" · "+e.address:""}${e.time?` · <span style="color:#8B0000">${e.time}</span>`:""}`;
@@ -268,12 +247,32 @@ function buildSubmit(){
   otherWrap.style.display="none";
   f.appendChild(otherWrap);
  
-  const row2=div({display:"flex",gap:"12px"});
-  row2.appendChild(fld("Date *",h("input",{type:"date",value:S.form.date,onInput:e=>{S.form.date=e.target.value}}),{flex:"1"}));
-  const catSel=h("select",{onChange:e=>{S.form.category=e.target.value}});
-  CATEGORIES.filter(c=>c!=="All").forEach(c=>{const o=h("option",{value:c},c);if(c===S.form.category)o.selected=true;catSel.appendChild(o);});
-  row2.appendChild(fld("Category",catSel,{flex:"1"}));
-  f.appendChild(row2);
+  f.appendChild(fld("Date *",h("input",{type:"date",value:S.form.date,onInput:e=>{S.form.date=e.target.value}})));
+ 
+  // Multi-select category checkboxes
+  const catWrap=div({marginBottom:"14px"});
+  catWrap.appendChild(h("label",{style:{display:"block",fontSize:"13px",fontWeight:"600",color:"#333",marginBottom:"8px"}},"Category (select all that apply)"));
+  const checkRow=div({display:"flex",flexWrap:"wrap",gap:"8px"});
+  CATEGORIES.filter(c=>c!=="All").forEach(cat=>{
+    const checked=(S.form.categories||[]).includes(cat);
+    const pill=h("label",{style:{display:"flex",alignItems:"center",gap:"6px",padding:"6px 12px",borderRadius:"20px",cursor:"pointer",fontSize:"13px",fontWeight:"600",border:"2px solid "+(checked?"#8B0000":"#ddd"),background:checked?"#fff5f5":"white",color:checked?"#8B0000":"#555",userSelect:"none"}});
+    const cb=h("input",{type:"checkbox",style:{display:"none"}});
+    if(checked) cb.checked=true;
+    cb.addEventListener("change",()=>{
+      let cats=S.form.categories||[];
+      if(cb.checked){cats=[...cats,cat];}else{cats=cats.filter(x=>x!==cat);}
+      S.form.categories=cats;
+      // Update pill style without full re-render
+      pill.style.border="2px solid "+(cb.checked?"#8B0000":"#ddd");
+      pill.style.background=cb.checked?"#fff5f5":"white";
+      pill.style.color=cb.checked?"#8B0000":"#555";
+    });
+    pill.appendChild(cb);
+    pill.appendChild(document.createTextNode(cat));
+    checkRow.appendChild(pill);
+  });
+  catWrap.appendChild(checkRow);
+  f.appendChild(catWrap);
  
   f.appendChild(fld("Time",h("input",{type:"text",value:S.form.time,placeholder:"e.g. 6:00 PM – 9:00 PM",onInput:e=>{S.form.time=e.target.value}})));
   f.appendChild(fld("Contact Email *",h("input",{type:"email",value:S.form.contact,placeholder:"so customers can reach you",onInput:e=>{S.form.contact=e.target.value}})));
@@ -282,9 +281,10 @@ function buildSubmit(){
   const submitBtn=h("button",{class:"btn btn-red",style:{alignSelf:"flex-start",padding:"12px 28px",fontSize:"15px"},
     onClick:()=>{
       if(!S.form.title||!S.form.business||!S.form.date||!S.form.contact) return;
+      if(!S.form.categories||S.form.categories.length===0) S.form.categories=["Other"];
       S.events.push({...S.form,id:Date.now(),approved:false});
       save();
-      S.form={title:"",business:"",address:"",date:"",time:"",category:"Community",description:"",contact:""};
+      S.form={title:"",business:"",address:"",date:"",time:"",categories:[],description:"",contact:""};
       set({submitted:true});
       setTimeout(()=>set({submitted:false}),4000);
     }},"Submit for Approval →");
@@ -407,7 +407,8 @@ function buildNewsletter(){
       const info=h("div",{style:{flex:"1"}});
       const tr=div({display:"flex",alignItems:"center",gap:"8px",marginBottom:"3px",flexWrap:"wrap"});
       tr.appendChild(h("span",{style:{fontWeight:"700",fontSize:"16px"}},e.title));
-      tr.appendChild(h("span",{class:"badge",style:{background:c.bg,color:c.fg}},e.category));
+      const nlCats=Array.isArray(e.categories)?e.categories:(e.category?[e.category]:[]);
+      nlCats.forEach(cat=>{const cc=cs(cat);tr.appendChild(h("span",{class:"badge",style:{background:cc.bg,color:cc.fg,marginRight:"3px"}},cat));});
       info.appendChild(tr);
       const ml=div({fontSize:"13px",color:"#777",marginBottom:"4px"});
       ml.innerHTML=`<strong style="color:#444">${e.business}</strong>${e.address?" · "+e.address:""}${e.time?` · <span style="color:#8B0000">${e.time}</span>`:""}`;
@@ -514,3 +515,4 @@ render();
 </script>
 </body>
 </html>
+ 
