@@ -65,12 +65,12 @@ const CAT = {
 };
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
  
-];
+const SAMPLE=[];
  
 // ── STATE ──────────────────────────────────────────────────────
 let S = {
   view:"calendar",
-  events: (() => { try{const v=localStorage.getItem("mag-v5");return v?JSON.parse(v):SAMPLE}catch{return SAMPLE} })(),
+  events: (() => { try{const v=localStorage.getItem("mag-v5");const p=v?JSON.parse(v):[];return Array.isArray(p)?p:[];}catch{return []} })(),
   filter:"All",
   adminOk:false,
   adminInput:"",
@@ -84,6 +84,7 @@ let S = {
 };
  
 function save(){try{localStorage.setItem("mag-v5",JSON.stringify(S.events))}catch{}}
+function clearAndReload(){localStorage.removeItem("mag-v5");location.reload();}
 function set(patch){Object.assign(S,patch);render()}
 function cs(cat){return CAT[cat]||CAT["Other"]}
 function fmtDay(ds){const d=new Date(ds+"T12:00:00");return{day:d.getDate(),mon:d.toLocaleDateString("en-US",{month:"short"}),dow:d.toLocaleDateString("en-US",{weekday:"short"}),full:d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}}
