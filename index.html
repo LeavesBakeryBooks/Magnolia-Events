@@ -124,6 +124,55 @@ async function apiDeleteEvent(id){
   if(!r.ok) throw new Error("Failed to delete event");
 }
 
+// ── BUSINESSES API ───────────────────────────────────────────────────────────
+const BIZ_URL = "/api/businesses";
+
+function fromATBiz(rec){
+  const f=rec.fields;
+  return{
+    id:rec.id,
+    name:f.name||"",
+    description:f.description||"",
+    knownFor:f.knownFor||"",
+    mustTry:f.mustTry||"",
+    bestTime:f.bestTime||"",
+    hours:f.hours||"",
+    website:f.website||"",
+    instagram:f.instagram||"",
+  };
+}
+
+async function apiLoadBusinesses(){
+  const r=await fetch(BIZ_URL);
+  if(!r.ok) throw new Error("Failed to load businesses");
+  const data=await r.json();
+  return(data.records||[]).map(fromATBiz);
+}
+
+async function apiSaveBusiness(biz){
+  const isNew=!biz.id||biz.id.startsWith("local-");
+  const fields={name:biz.name,description:biz.description,knownFor:biz.knownFor,
+    mustTry:biz.mustTry,bestTime:biz.bestTime,hours:biz.hours,
+    website:biz.website,instagram:biz.instagram};
+  if(isNew){
+    const r=await fetch(BIZ_URL,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({records:[{fields}]})});
+    if(!r.ok) throw new Error("Failed to create business");
+    const data=await r.json();
+    return fromATBiz(data.records[0]);
+  } else {
+    const r=await fetch(BIZ_URL+"?id="+biz.id,{method:"PATCH",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({fields})});
+    if(!r.ok) throw new Error("Failed to update business");
+    const data=await r.json();
+    return fromATBiz(data);
+  }
+}
+
+async function apiDeleteBusiness(id){
+  await fetch(BIZ_URL+"?id="+id,{method:"DELETE"});
+}
+
 // ── STATE ─────────────────────────────────────────────────────────────────────
 let S={
   view:"calendar",events:[],loading:true,error:null,
@@ -133,6 +182,11 @@ let S={
   copied:false,
   form:{title:"",business:"",address:"",date:"",endDate:"",time:"",categories:[],description:"",contact:""},
   itin:{date:"",interests:[],result:null,loading:false,error:null},
+  businesses:[],
+  bizLoading:false,
+  bizEdit:null,  // business being edited (null = none)
+  bizSaving:false,
+  bizError:null,
 };
 
 function set(patch){Object.assign(S,patch);render();}
@@ -168,12 +222,14 @@ function buildView(){
   if(view==="adminGate")  return buildAdminGate();
   if(view==="admin")      return buildAdminPanel();
   if(view==="itinerary")  return buildItineraryPage();
+  if(view==="businesses") return buildBusinessesPage();
   return buildMain();
 }
 
 // ── HEADER ────────────────────────────────────────────────────────────────────
 function buildHeader(){
-  const tabDefs=[["calendar","📅 Events"],["submit","＋ Add Event"],["newsletter","🖨 Newsletter"],["itinerary","🗺 Plan My Visit"],[S.adminOk?"admin":"adminGate", S.adminOk?"🔓 Admin":"🔒 Admin"]];
+  const tabDefs=[["calendar","📅 Events"],["submit","＋ Add Event"],["newsletter","🖨 Newsletter"],["itinerary","🗺 Plan My Visit"],
+    ...(S.adminOk?[["businesses","🏪 Businesses"],["admin","🔓 Admin"]]:[["adminGate","🔒 Admin"]])];
   const tabs=h("nav",{id:"tabs",style:{display:"flex",gap:"2px"}},
     ...tabDefs.map(([v,label])=>h("button",{
       class:"tab"+(S.view===v||(v==="adminGate"&&S.view==="admin")?" active":""),
@@ -507,13 +563,7 @@ function buildAdminGate(){
         onClick:()=>set({view:"calendar",adminInput:"",passErr:false})},"← Back to calendar"))));
   return page;
 }
-function tryAdmin(){
-  if(S.adminInput===ADMIN_PASS){
-    set({view:"calendar",adminOk:true,passErr:false});
-  } else {
-    set({passErr:true});
-  }
-}
+function tryAdmin(){if(S.adminInput===ADMIN_PASS)set({view:"admin",adminOk:true,passErr:false});else set({passErr:true});}
 
 // ── ADMIN EDIT MODAL ─────────────────────────────────────────────────────────
 function showEditModal(e){
@@ -641,7 +691,7 @@ function buildAdminPanel(){
   const page=h("div",{});page.appendChild(buildHeader());
   const inner=div({maxWidth:"700px",margin:"0 auto",padding:"28px 22px"});
   const hrow=div({display:"flex",alignItems:"center",gap:"12px",marginBottom:"24px"});
-  hrow.appendChild(h("button",{class:"btn btn-gray",onClick:()=>set({view:"calendar"})},"← Back"));
+  hrow.appendChild(h("button",{class:"btn btn-gray",onClick:()=>set({view:"calendar",adminOk:false,adminInput:""})},"← Back"));
   hrow.appendChild(h("h2",{style:{fontSize:"22px",fontWeight:"800",color:"#8B0000",margin:"0"}},"Admin Panel"));
   if(pending.length>0)hrow.appendChild(span({background:"#FF6D00",color:"white",borderRadius:"20px",padding:"2px 10px",fontSize:"12px",fontWeight:"700"},pending.length+" pending"));
   hrow.appendChild(h("button",{class:"btn btn-gray",style:{marginLeft:"auto"},onClick:async()=>{
@@ -705,7 +755,6 @@ function buildAdminPanel(){
 const ITIN_TAGS = ["Coffee and Drinks","Dining","Art and Music","Shopping","Happy Hour","Date Night","Family Friendly","Health and Wellness","Community"];
 
 function checkRateLimit(){
-  if(S.adminOk) return true; // admin has unlimited
   const MAX=5;
   const today=new Date().toISOString().slice(0,10);
   let data={date:"",count:0};
@@ -715,16 +764,6 @@ function checkRateLimit(){
   data.count++;
   try{localStorage.setItem("mag-itin-rl",JSON.stringify(data));}catch{}
   return true;
-}
-
-function getRateLimitRemaining(){
-  if(S.adminOk) return 999; // admin unlimited
-  const MAX=5;
-  const today=new Date().toISOString().slice(0,10);
-  let data={date:"",count:0};
-  try{const s=localStorage.getItem("mag-itin-rl");if(s)data=JSON.parse(s);}catch{}
-  if(data.date!==today) return MAX;
-  return Math.max(0,MAX-data.count);
 }
 
 function getRateLimitRemaining(){
@@ -758,7 +797,15 @@ async function generateItinerary(){
     ? dayEvents.map(e=>"- "+e.title+" at "+e.business+" ("+e.address+")"+(e.time?" at "+e.time:"")+": "+e.description).join("\n")
     : "No specific events posted for this day.";
 
-  const bizList=matchingBiz.map(b=>"- "+b.name+" ("+b.address+"): "+b.vibe+" Hours: "+b.hours).join("\n");
+  // Enrich with real business profiles from Airtable if available
+  const bizList=matchingBiz.map(b=>{
+    const profile=S.businesses.find(p=>p.name===b.name);
+    const desc=profile&&profile.description?profile.description:b.vibe;
+    const knownFor=profile&&profile.knownFor?" Known for: "+profile.knownFor:"";
+    const mustTry=profile&&profile.mustTry?" Must try: "+profile.mustTry:"";
+    const hours=profile&&profile.hours?profile.hours:b.hours;
+    return "- "+b.name+" ("+b.address+"): "+desc+knownFor+mustTry+" Hours: "+hours;
+  }).join("\n");
 
   const promptParts=[
     "You are a knowledgeable, enthusiastic local guide for Magnolia Avenue in Fort Worth, Texas",
@@ -929,11 +976,172 @@ function buildItineraryPage(){
   return page;
 }
 
+// ── BUSINESSES PAGE ─────────────────────────────────────────────────────────
+function buildBusinessesPage(){
+  const page=h("div",{});
+  page.appendChild(buildHeader());
+  const inner=div({maxWidth:"720px",margin:"0 auto",padding:"28px 22px"});
+
+  // Header row
+  const hrow=div({display:"flex",alignItems:"center",gap:"12px",marginBottom:"24px",flexWrap:"wrap"});
+  hrow.appendChild(h("h2",{style:{fontSize:"22px",fontWeight:"800",color:"#8B0000",margin:"0",fontFamily:"Georgia,serif"}},"🏪 Business Profiles"));
+  hrow.appendChild(h("p",{style:{fontSize:"13px",color:"#888",margin:"0",flex:"1"}},"These profiles feed the itinerary generator — the more detail, the better."));
+  hrow.appendChild(h("button",{class:"btn btn-red",style:{fontSize:"13px"},onClick:function(){
+    set({bizEdit:{id:"local-"+Date.now(),name:"",description:"",knownFor:"",mustTry:"",bestTime:"",hours:"",website:"",instagram:""}});
+  }},"+ Add Business"));
+  inner.appendChild(hrow);
+
+  if(S.bizError) inner.appendChild(h("div",{class:"error-banner"},S.bizError));
+
+  // Edit form (shown inline when bizEdit is set)
+  if(S.bizEdit){
+    const e=S.bizEdit;
+    const formCard=div({background:"#FFFBF0",border:"1px solid #FFE082",borderRadius:"12px",padding:"24px",marginBottom:"24px"});
+    formCard.appendChild(h("h3",{style:{fontSize:"16px",fontWeight:"700",color:"#8B0000",marginBottom:"16px"}},
+      e.id.startsWith("local-")?"New Business Profile":"Edit: "+e.name));
+
+    function bfld(label,key,type,placeholder){
+      const w=div({marginBottom:"12px"});
+      w.appendChild(h("label",{style:{display:"block",fontSize:"13px",fontWeight:"600",color:"#333",marginBottom:"4px"}},label));
+      if(type==="textarea"){
+        const ta=h("textarea",{rows:"3",placeholder:placeholder||"",
+          style:{width:"100%",padding:"9px 11px",border:"1px solid #ddd",borderRadius:"7px",fontSize:"13px",resize:"vertical",whiteSpace:"pre-wrap"},
+          onInput:function(ev){S.bizEdit[key]=ev.target.value;}},e[key]||"");
+        w.appendChild(ta);
+      } else {
+        const inp=h("input",{type:type||"text",value:e[key]||"",placeholder:placeholder||"",
+          style:{width:"100%",padding:"9px 11px",border:"1px solid #ddd",borderRadius:"7px",fontSize:"13px"},
+          onInput:function(ev){S.bizEdit[key]=ev.target.value;}});
+        w.appendChild(inp);
+      }
+      return w;
+    }
+
+    const row2=div({display:"flex",gap:"12px"});
+    const nameW=div({flex:"2"});
+    nameW.appendChild(h("label",{style:{display:"block",fontSize:"13px",fontWeight:"600",color:"#333",marginBottom:"4px"}},"Business Name *"));
+    const nameIn=h("input",{type:"text",value:e.name||"",placeholder:"e.g. Leaves Bakery and Books",
+      style:{width:"100%",padding:"9px 11px",border:"1px solid #ddd",borderRadius:"7px",fontSize:"13px"},
+      onInput:function(ev){S.bizEdit.name=ev.target.value;}});
+    nameW.appendChild(nameIn);
+    row2.appendChild(nameW);
+    const hoursW=div({flex:"2"});
+    hoursW.appendChild(h("label",{style:{display:"block",fontSize:"13px",fontWeight:"600",color:"#333",marginBottom:"4px"}},"Hours"));
+    const hoursIn=h("input",{type:"text",value:e.hours||"",placeholder:"e.g. Tues–Sun 8am–5pm",
+      style:{width:"100%",padding:"9px 11px",border:"1px solid #ddd",borderRadius:"7px",fontSize:"13px"},
+      onInput:function(ev){S.bizEdit.hours=ev.target.value;}});
+    hoursW.appendChild(hoursIn);
+    row2.appendChild(hoursW);
+    formCard.appendChild(row2);
+    formCard.appendChild(div({marginBottom:"12px"}));
+
+    formCard.appendChild(bfld("Short Description","description","textarea","2-3 sentences about what makes this place special. This goes directly into the AI itinerary."));
+    formCard.appendChild(bfld("Known For / Specialties","knownFor","textarea","e.g. Sourdough toast, rotating book picks, natural wine selections"));
+    formCard.appendChild(bfld("Must-Try Item or Experience","mustTry","text","e.g. The brown butter cookie and a pourover"));
+    formCard.appendChild(bfld("Best Time to Visit","bestTime","text","e.g. Weekend mornings, Thursday evenings for happy hour"));
+
+    const row3=div({display:"flex",gap:"12px"});
+    const webW=div({flex:"1"});
+    webW.appendChild(h("label",{style:{display:"block",fontSize:"13px",fontWeight:"600",color:"#333",marginBottom:"4px"}},"Website"));
+    webW.appendChild(h("input",{type:"url",value:e.website||"",placeholder:"https://",
+      style:{width:"100%",padding:"9px 11px",border:"1px solid #ddd",borderRadius:"7px",fontSize:"13px"},
+      onInput:function(ev){S.bizEdit.website=ev.target.value;}}));
+    row3.appendChild(webW);
+    const igW=div({flex:"1"});
+    igW.appendChild(h("label",{style:{display:"block",fontSize:"13px",fontWeight:"600",color:"#333",marginBottom:"4px"}},"Instagram"));
+    igW.appendChild(h("input",{type:"text",value:e.instagram||"",placeholder:"@handle",
+      style:{width:"100%",padding:"9px 11px",border:"1px solid #ddd",borderRadius:"7px",fontSize:"13px"},
+      onInput:function(ev){S.bizEdit.instagram=ev.target.value;}}));
+    row3.appendChild(igW);
+    formCard.appendChild(row3);
+    formCard.appendChild(div({marginBottom:"12px"}));
+
+    const btnRow=div({display:"flex",gap:"10px",marginTop:"16px"});
+    btnRow.appendChild(h("button",{class:"btn btn-red",style:{padding:"10px 24px",opacity:S.bizSaving?"0.7":"1"},
+      onClick:async function(){
+        if(!S.bizEdit.name) return;
+        set({bizSaving:true,bizError:null});
+        try{
+          const saved=await apiSaveBusiness(S.bizEdit);
+          const exists=S.businesses.find(b=>b.id===saved.id);
+          if(exists){S.businesses=S.businesses.map(b=>b.id===saved.id?saved:b);}
+          else{S.businesses=[...S.businesses,saved];}
+          set({bizEdit:null,bizSaving:false});
+        }catch(err){set({bizSaving:false,bizError:"Save failed: "+err.message});}
+      }},S.bizSaving?"Saving…":"💾 Save Profile"));
+    btnRow.appendChild(h("button",{class:"btn btn-gray",onClick:function(){set({bizEdit:null,bizError:null});}},"Cancel"));
+    formCard.appendChild(btnRow);
+    inner.appendChild(formCard);
+  }
+
+  // Business list
+  if(S.bizLoading){
+    inner.appendChild(div({display:"flex",alignItems:"center",gap:"12px",padding:"40px 0",color:"#aaa"},
+      h("div",{class:"spinner"}),h("span",{},"Loading profiles…")));
+  } else if(S.businesses.length===0){
+    inner.appendChild(div({textAlign:"center",padding:"60px 0",color:"#bbb"},
+      h("div",{style:{fontSize:"40px",marginBottom:"12px"}},"🏪"),
+      h("div",{style:{fontSize:"16px",fontWeight:"600",marginBottom:"8px"}},"No business profiles yet"),
+      h("div",{style:{fontSize:"14px"}},"Add profiles for each merchant — the AI itinerary will use this info instead of guessing.")));
+  } else {
+    // Pre-populate missing businesses from BUSINESSES list
+    const existingNames=S.businesses.map(b=>b.name);
+    const missing=BUSINESSES.filter(b=>b.name!=="Other / Not Listed"&&!existingNames.includes(b.name));
+    if(missing.length>0){
+      inner.appendChild(div({background:"#E3F2FD",border:"1px solid #BBDEFB",borderRadius:"8px",
+        padding:"12px 16px",marginBottom:"16px",fontSize:"13px",color:"#0D47A1"},
+        h("strong",{},"💡 "+missing.length+" businesses haven't been set up yet: "),
+        missing.map(b=>b.name).join(", ")+". Click + Add Business to create their profiles."));
+    }
+
+    S.businesses.forEach(function(b){
+      const card=div({background:"white",borderRadius:"12px",padding:"18px 20px",
+        boxShadow:"0 1px 4px rgba(0,0,0,.06)",marginBottom:"10px",border:"1px solid #eee"});
+      const topRow=div({display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:"8px"});
+      const nameCol=div({});
+      nameCol.appendChild(h("div",{style:{fontWeight:"700",fontSize:"16px",color:"#111"}},b.name));
+      if(b.hours) nameCol.appendChild(h("div",{style:{fontSize:"12px",color:"#888",marginTop:"2px"}},"🕐 "+b.hours));
+      topRow.appendChild(nameCol);
+      const editBtns=div({display:"flex",gap:"8px"});
+      editBtns.appendChild(h("button",{style:{padding:"5px 12px",background:"#E3F2FD",color:"#1565C0",
+        border:"1px solid #BBDEFB",borderRadius:"6px",cursor:"pointer",fontSize:"12px",fontWeight:"600"},
+        onClick:function(){set({bizEdit:{...b}});}},"✏️ Edit"));
+      editBtns.appendChild(h("button",{style:{padding:"5px 12px",background:"#fafafa",color:"#c62828",
+        border:"1px solid #e0e0e0",borderRadius:"6px",cursor:"pointer",fontSize:"12px",fontWeight:"600"},
+        onClick:async function(){
+          if(!confirm("Delete "+b.name+"'s profile?")) return;
+          try{await apiDeleteBusiness(b.id);S.businesses=S.businesses.filter(x=>x.id!==b.id);render();}
+          catch(err){set({bizError:"Delete failed: "+err.message});}
+        }},"Delete"));
+      topRow.appendChild(editBtns);
+      card.appendChild(topRow);
+      if(b.description) card.appendChild(h("div",{style:{fontSize:"13.5px",color:"#444",lineHeight:"1.5",marginBottom:"6px"}},b.description));
+      const tags=div({display:"flex",flexWrap:"wrap",gap:"6px",marginTop:"6px"});
+      if(b.knownFor) tags.appendChild(div({background:"#F3E5F5",color:"#4A148C",borderRadius:"6px",padding:"3px 9px",fontSize:"12px"},"🌟 "+b.knownFor));
+      if(b.mustTry) tags.appendChild(div({background:"#E8F5E9",color:"#1B5E20",borderRadius:"6px",padding:"3px 9px",fontSize:"12px"},"✨ Must try: "+b.mustTry));
+      if(b.bestTime) tags.appendChild(div({background:"#FFF3E0",color:"#E65100",borderRadius:"6px",padding:"3px 9px",fontSize:"12px"},"⏰ "+b.bestTime));
+      if(b.website||b.instagram){
+        if(b.website) tags.appendChild(h("a",{href:b.website,target:"_blank",style:{background:"#E3F2FD",color:"#1565C0",borderRadius:"6px",padding:"3px 9px",fontSize:"12px",textDecoration:"none"}},"🌐 Website"));
+        if(b.instagram) tags.appendChild(h("a",{href:"https://instagram.com/"+b.instagram.replace("@",""),target:"_blank",style:{background:"#FCE4EC",color:"#880E4F",borderRadius:"6px",padding:"3px 9px",fontSize:"12px",textDecoration:"none"}},"📸 "+b.instagram));
+      }
+      if(tags.children.length>0) card.appendChild(tags);
+      inner.appendChild(card);
+    });
+  }
+
+  page.appendChild(inner);
+  return page;
+}
+
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 (async()=>{
   render();
-  try{const evs=await apiLoadEvents();set({events:evs,loading:false});}
-  catch(err){set({loading:false,error:err.message});}
+  try{
+    const [evs, bizs] = await Promise.all([apiLoadEvents(), apiLoadBusinesses()]);
+    set({events:evs, businesses:bizs, loading:false});
+  } catch(err){
+    set({loading:false, error:err.message});
+  }
 })();
 </script>
 </body>
