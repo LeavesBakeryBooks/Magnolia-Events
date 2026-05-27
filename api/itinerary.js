@@ -19,9 +19,26 @@ export default async function handler(req, res) {
         messages: req.body.messages
       })
     });
+
     const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Anthropic API error:", JSON.stringify(data));
+      return res.status(response.status).json({
+        error: (data.error && data.error.message) || "Anthropic API error",
+        detail: data
+      });
+    }
+
+    if (!data.content || !data.content[0] || !data.content[0].text) {
+      console.error("Unexpected Anthropic response:", JSON.stringify(data));
+      return res.status(500).json({ error: "Unexpected response format", detail: data });
+    }
+
     return res.status(200).json(data);
+
   } catch (err) {
+    console.error("Handler error:", err);
     return res.status(500).json({ error: err.message });
   }
 }
