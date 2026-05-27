@@ -333,7 +333,7 @@ function buildSubmit(){
     const b=BUSINESSES.find(x=>x.name===e.target.value);
     if(b){S.form.business=b.name==="Other / Not Listed"?"":b.name;S.form.address=b.address;
       const of=document.getElementById("other-biz-field");if(of)of.style.display=!S.form.business?"block":"none";}
-  }});
+  });
   bizSel.appendChild(h("option",{value:"",disabled:"",selected:""},"— Select your business —"));
   BUSINESSES.forEach(b=>{const o=h("option",{value:b.name},b.name);if(b.name===S.form.business)o.selected=true;bizSel.appendChild(o);});
   f.appendChild(fld("Your Business *",bizSel));
