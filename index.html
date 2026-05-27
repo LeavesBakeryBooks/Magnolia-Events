@@ -563,7 +563,7 @@ function buildAdminGate(){
         onClick:()=>set({view:"calendar",adminInput:"",passErr:false})},"← Back to calendar"))));
   return page;
 }
-function tryAdmin(){if(S.adminInput===ADMIN_PASS)set({view:"admin",adminOk:true,passErr:false});else set({passErr:true});}
+function tryAdmin(){if(S.adminInput===ADMIN_PASS)set({view:"calendar",adminOk:true,passErr:false});else set({passErr:true});}
 
 // ── ADMIN EDIT MODAL ─────────────────────────────────────────────────────────
 function showEditModal(e){
@@ -691,7 +691,7 @@ function buildAdminPanel(){
   const page=h("div",{});page.appendChild(buildHeader());
   const inner=div({maxWidth:"700px",margin:"0 auto",padding:"28px 22px"});
   const hrow=div({display:"flex",alignItems:"center",gap:"12px",marginBottom:"24px"});
-  hrow.appendChild(h("button",{class:"btn btn-gray",onClick:()=>set({view:"calendar",adminOk:false,adminInput:""})},"← Back"));
+  hrow.appendChild(h("button",{class:"btn btn-gray",onClick:()=>set({view:"calendar"})},"← Back"));
   hrow.appendChild(h("h2",{style:{fontSize:"22px",fontWeight:"800",color:"#8B0000",margin:"0"}},"Admin Panel"));
   if(pending.length>0)hrow.appendChild(span({background:"#FF6D00",color:"white",borderRadius:"20px",padding:"2px 10px",fontSize:"12px",fontWeight:"700"},pending.length+" pending"));
   hrow.appendChild(h("button",{class:"btn btn-gray",style:{marginLeft:"auto"},onClick:async()=>{
