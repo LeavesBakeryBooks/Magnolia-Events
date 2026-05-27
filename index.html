@@ -755,6 +755,7 @@ function buildAdminPanel(){
 const ITIN_TAGS = ["Coffee and Drinks","Dining","Art and Music","Shopping","Happy Hour","Date Night","Family Friendly","Health and Wellness","Community"];
 
 function checkRateLimit(){
+  if(S.adminOk) return true;
   const MAX=5;
   const today=new Date().toISOString().slice(0,10);
   let data={date:"",count:0};
@@ -767,6 +768,7 @@ function checkRateLimit(){
 }
 
 function getRateLimitRemaining(){
+  if(S.adminOk) return 999;
   const MAX=5;
   const today=new Date().toISOString().slice(0,10);
   let data={date:"",count:0};
@@ -774,7 +776,6 @@ function getRateLimitRemaining(){
   if(data.date!==today) return MAX;
   return Math.max(0,MAX-data.count);
 }
-
 async function generateItinerary(){
   const{date,interests}=S.itin;
   if(!date||interests.length===0) return;
