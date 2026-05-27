@@ -14,16 +14,18 @@ export default async function handler(req, res) {
         "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-sonnet-4-5",
         max_tokens: 1000,
         messages: req.body.messages
       })
     });
 
-    const data = await response.json();
+    const text = await response.text();
+    let data;
+    try { data = JSON.parse(text); } 
+    catch(e) { return res.status(500).json({ error: "Invalid JSON from Anthropic", raw: text.slice(0,200) }); }
 
     if (!response.ok) {
-      console.error("Anthropic API error:", JSON.stringify(data));
       return res.status(response.status).json({
         error: (data.error && data.error.message) || "Anthropic API error",
         detail: data
@@ -31,14 +33,12 @@ export default async function handler(req, res) {
     }
 
     if (!data.content || !data.content[0] || !data.content[0].text) {
-      console.error("Unexpected Anthropic response:", JSON.stringify(data));
       return res.status(500).json({ error: "Unexpected response format", detail: data });
     }
 
     return res.status(200).json(data);
 
   } catch (err) {
-    console.error("Handler error:", err);
     return res.status(500).json({ error: err.message });
   }
 }
