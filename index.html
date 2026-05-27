@@ -699,6 +699,7 @@ function buildAdminPanel(){
 const ITIN_TAGS = ["Coffee and Drinks","Dining","Art and Music","Shopping","Happy Hour","Date Night","Family Friendly","Health and Wellness","Community"];
 
 function checkRateLimit(){
+  if(S.adminOk) return true; // admin has unlimited
   const MAX=5;
   const today=new Date().toISOString().slice(0,10);
   let data={date:"",count:0};
@@ -708,6 +709,16 @@ function checkRateLimit(){
   data.count++;
   try{localStorage.setItem("mag-itin-rl",JSON.stringify(data));}catch{}
   return true;
+}
+
+function getRateLimitRemaining(){
+  if(S.adminOk) return 999; // admin unlimited
+  const MAX=5;
+  const today=new Date().toISOString().slice(0,10);
+  let data={date:"",count:0};
+  try{const s=localStorage.getItem("mag-itin-rl");if(s)data=JSON.parse(s);}catch{}
+  if(data.date!==today) return MAX;
+  return Math.max(0,MAX-data.count);
 }
 
 function getRateLimitRemaining(){
