@@ -1119,7 +1119,7 @@ function buildBusinessesPage(){
   } else {
     // Pre-populate missing businesses from BUSINESSES list
     const existingNames=S.businesses.map(b=>b.name);
-   const missing=BUSINESSES.filter(b=>b.name!=="Other / Not Listed"&&!existingNames.includes(b.name));
+   const missing=BUSINESSES_DEFAULT.filter(b=>b.name!=="Other / Not Listed"&&!existingNames.includes(b.name));
     if(missing.length>0){
       inner.appendChild(div({background:"#E3F2FD",border:"1px solid #BBDEFB",borderRadius:"8px",
         padding:"12px 16px",marginBottom:"16px",fontSize:"13px",color:"#0D47A1"},
