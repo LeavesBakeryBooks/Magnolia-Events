@@ -199,8 +199,9 @@ let S={
   copied:false,
   form:{title:"",business:"",address:"",date:"",endDate:"",time:"",categories:[],description:"",contact:"",
     recurring:false,recurType:"weekly",recurDay:"Friday",recurWeek:"1",recurEndDate:""},
-  bulkMode:false,
-  bulkText:"",
+bulkMode:false,
+icsMode:false,
+bulkText:"",
   bulkParsed:[],
   bulkBusiness:"",
   bulkContact:"",
@@ -692,9 +693,9 @@ function buildSubmit(){
       style:{padding:"7px 16px",fontSize:"13px",fontWeight:"600",border:"none",borderRadius:"7px",cursor:"pointer",
         background:isActive?"#8B0000":"transparent",color:isActive?"white":"#666"},
       onClick:function(){
-        if(mode==="single") set({bulkMode:false,icsEvents:[],icsFile:null,icsDone:false});
-        else if(mode==="bulk") set({bulkMode:true,icsEvents:[],icsFile:null,icsDone:false});
-        else set({bulkMode:false,icsEvents:S.icsEvents,icsFile:S.icsFile});
+        if(mode==="single") set({bulkMode:false,icsMode:false,icsEvents:[],icsFile:null,icsDone:false,bulkDone:false});
+else if(mode==="bulk") set({bulkMode:true,icsMode:false,icsEvents:[],icsFile:null,icsDone:false,bulkDone:false});
+else set({bulkMode:false,icsMode:true,bulkDone:false});
       }
     },label));
   });
@@ -702,7 +703,7 @@ function buildSubmit(){
 
   // Route to correct sub-form
   if(S.bulkMode){ wrap.appendChild(buildBulkForm()); return wrap; }
-  if(S.icsEvents.length>0||S.icsFile!==null){ wrap.appendChild(buildIcsImport()); return wrap; }
+if(S.icsMode){ wrap.appendChild(buildIcsImport()); return wrap; }
   if(S.submitted) wrap.appendChild(h("div",{class:"success-banner"},"✓ Submitted! Your event is pending approval — usually within 24 hours."));
   if(S.error)     wrap.appendChild(h("div",{class:"error-banner"},"⚠ "+S.error));
   const f=div({display:"flex",flexDirection:"column",gap:"0"});
