@@ -685,13 +685,17 @@ function buildSubmit(){
 
   // Mode toggle
   const modeRow=div({display:"flex",gap:"6px",marginBottom:"20px",background:"#f0ece8",borderRadius:"10px",padding:"4px",width:"fit-content"});
+ modeRow.setAttribute("data-mode", S.bulkMode?"bulk":S.icsMode?"ics":"single");
   [["single","Single Event"],["bulk","Paste Multiple"],["ics","Import from Google"]].forEach(function([mode,label]){
     const active=(!S.bulkMode&&!S.icsFile&&mode==="single")||(S.bulkMode&&mode==="bulk")||(S.icsFile!==null&&mode==="ics")||
       (mode==="ics"&&S.icsEvents.length>0);
     const isActive=(mode==="single"&&!S.bulkMode&&S.icsEvents.length===0)||(mode==="bulk"&&S.bulkMode)||(mode==="ics"&&(S.icsEvents.length>0||(!S.bulkMode&&S.icsFile!==null)));
     modeRow.appendChild(h("button",{
-      style:{padding:"7px 16px",fontSize:"13px",fontWeight:"600",border:"none",borderRadius:"7px",cursor:"pointer",
-        background:isActive?"#8B0000":"transparent",color:isActive?"white":"#666"},
+      style:{padding:"7px 16px",fontSize:"13px",fontWeight:"600",cursor:"pointer",borderRadius:"7px",
+  border: isActive?"2px solid #8B0000":"2px solid transparent",
+  background:isActive?"#8B0000":"transparent",
+  color:isActive?"white":"#666",
+  outline:"none"},
       onClick:function(){
         if(mode==="single") set({bulkMode:false,icsMode:false,icsEvents:[],icsFile:null,icsDone:false,bulkDone:false});
 else if(mode==="bulk") set({bulkMode:true,icsMode:false,icsEvents:[],icsFile:null,icsDone:false,bulkDone:false});
